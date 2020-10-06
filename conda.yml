@@ -1,0 +1,24 @@
+name: paccmann_polymer
+channels:
+ - https://conda.anaconda.org/rdkit
+ - https://conda.anaconda.org/conda-forge
+ - https://conda.anaconda.org/pytorch
+dependencies:
+  - rdkit=2019.03.1
+  - python>=3.6,<3.8
+  - pip>=19.1
+  - pytorch==1.6.0
+  - pip:
+    - pytoda @ git+https://github.com/PaccMann/paccmann_datasets@0.1.1
+    - paccmann_chemistry @ git+https://github.com/PaccMann/paccmann_chemistry@0.0.4
+    - numpy>=1.14.3
+    - scipy>=1.3.1
+    - torch-scatter==2.0.5 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
+    - torch-sparse==0.6.7 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
+    - torch-cluster==1.5.7 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
+    - torch-spline-conv==1.2.0 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
+    - torch-geometric==1.6.1
+    - matplotlib>=3.1.1
+    - networkx>=2.5
+    - scikit-learn>=0.23.2
+    - tensorboard>=1.15.0
