@@ -30,29 +30,39 @@ from paccmann_polymer.topologically_regularized_models.experiments.cora.utils \
 import argparse
 
 
-def train(model, loader, optimizer, writer):
-    model.train()
-    # loader = NeighborSampler(data.edge_index, sizes=[10])
-    # loader = DataLoader(subsampled_data, batch_size=1)
-    for _iter, data in enumerate(loader):
-        optimizer.zero_grad()
-        pos_z, neg_z, summary = model(data.x, data.edge_index)
-        loss = model.loss(pos_z, neg_z, summary)
-        optimizer.step()
-        if _iter % 100:
-            writer.add_scalar('loss', loss.item(), epoch * len(loader) + _iter)
-
-    return loss.item()
-
-
-def test(model, data):
-    model.eval()
-    z, _, _ = model(data.x, data.edge_index)
-    acc = model.test(
-        z[data.train_mask],
-        data.y[data.train_mask],
-        z[data.test_mask],
-        data.y[data.test_mask],
-        max_iter=150
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Graph synthetic example')
+    parser.add_argument(
+        'dataset',
+        type=str,
+        choices=['Cora', 'CiteSeer', 'PubMed'],
+        help='Which dataset to use'
     )
-    return acc
+
+    args = parser.parse_args()
+    dataset: Any = args.dataset
+
+    writer = SummaryWriter(f'logs_{dataset.lower()}/infomax_batched')
+    path = os.path.join('.', 'data', dataset)
+    dataset = Planetoid(path, dataset)
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = DeepGraphInfomax(
+        hidden_channels=512,
+        encoder=Encoder(dataset.num_features, 512),
+        summary=lambda z, *args, **kwargs: torch.sigmoid(z.mean(dim=0)),
+        corruption=corruption
+    ).to(device)
+
+    data = dataset[0].to(device)
+    batched_data = load_data(data)
+    loader = DataLoader(batched_data)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    for epoch in range(1, 301):
+        loss = train(model, loader, optimizer, writer)
+        print('Epoch: {:03d}, Loss: {:.4f}'.format(epoch, loss))
+    acc = test(model, data)
+    writer.add_scalar('accuracy', acc)
+    print('Accuracy: {:.4f}'.format(acc))

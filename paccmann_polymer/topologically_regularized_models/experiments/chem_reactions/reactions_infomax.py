@@ -144,3 +144,195 @@ def train(
         scheduler.step()
     logger.info(f"Learning rate {optimizer.param_groups[0]['lr']}")
     logger.info(f'Epoch: {epoch}\t{train_loss/_iter}\t{time()-start_time}')
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Infomax reactions experiment'
+    )
+
+    parser.add_argument(
+        '--epochs',
+        type=int,
+        default=2,
+        metavar='N',
+        help='number of epochs to train (default: 10)'
+    )
+    parser.add_argument(
+        '--model',
+        type=str,
+        default='pretrained',
+        required=True,
+        choices=['pretrained', 'finetuned', 'graph_finetuned'],
+        help='Model to be used'
+    )
+    parser.add_argument(
+        '--gr',
+        type=float,
+        default=None,
+        help='Graph regularizer (in case we are using'
+        ' an encoder that requires it)'
+    )
+    parser.add_argument('-v', action='store_true', help='Verbose (tqdm)')
+    parser.add_argument(
+        '-c', '--cluster', action='store_true', help='Set server file paths'
+    )
+    args = parser.parse_args()
+
+    logger.info('Running model')
+
+    epochs = args.epochs
+    verbose = args.v
+    run_cluster = args.cluster
+    encoder_model = args.model
+    gr = args.gr
+    if encoder_model == 'graph_finetuned' and (gr is None or gr == 0.0):
+        raise ValueError('If model is graph a `gr` needs to be provided')
+
+    # FILE DEFS
+    DATA_FOLDER = './data'
+    PROCESSED_FILE = os.path.join(
+        DATA_FOLDER, 'MIT_mixed', 'processed-train.json'
+    )
+
+    DOWNSTREAM_TRAIN_FILE = os.path.join(
+        DATA_FOLDER, 'MIT_mixed', 'downstream_train.json'
+    )
+    DOWNSTREAM_TEST_FILE = os.path.join(
+        DATA_FOLDER, 'MIT_mixed', 'downstream_test.json'
+    )
+
+    MDL_DIR =  # Model directory
+
+    PARAM_FILE = os.path.join(
+        MDL_DIR, 'model_params.json'
+    )  # Add model dir
+
+    # The models here follow https://github.com/PaccMann/paccmann_chemistry/issues 
+    # and where pretrained by using the code under `experiments/finetunning`.
+    # The following scheme is a skeleton of how we originally ran the
+    # experiments. Three setups were tested, pretrained model, finetuned
+    # and graph (GRVAE) finetuned. More details can be seen in Section 3.3
+    WEIGHT_FILE = {
+        'pretrained':
+            os.path.join(
+                MDL_DIR, 'pretrained',
+                'weights', 'last_model.pt'
+            ),
+        'finetuned':
+            os.path.join(
+                MDL_DIR,
+                'finetuned',
+                'weights',  'last_model.pt'
+            ),
+        'graph_finetuned':
+            os.path.join(
+                'graph_finetuned',
+                'weights',  'last_model.pt'
+            )
+    }[encoder_model]
+
+    LANG_FILE =  # Lang FILE
+
+    device = get_device()
+
+    max_total_bundle = 20
+
+    savename_suffix = f'infomax_react_{encoder_model}'
+    if encoder_model != 'graph_finetuned':
+        savename_suffix += f'-gr{gr}'
+    model_dir = f'./models_react/20k_data/{savename_suffix}'
+
+    writer = SummaryWriter(f'logs/20k_data/{savename_suffix}')
+    save_dir = os.path.join(model_dir, 'weights')
+    os.makedirs(save_dir, exist_ok=True)
+
+    model = DeepGraphInfomax(
+        hidden_channels=512,
+        encoder=Encoder(
+            PARAM_FILE,
+            LANG_FILE,
+            WEIGHT_FILE,
+            device=device,  # TODO Is this the best spot?
+            in_channels=256,  # Latent space size
+            hidden_channels=512,
+            batch_mode='Packed'
+        ),
+        summary=lambda z, *args, **kwargs: torch.sigmoid(z.mean(dim=0)),
+        corruption=corruption
+    ).to(device)
+
+    optimizer = OPTIMIZER_FACTORY['adam'](model.parameters(), lr=1e-4)
+    scheduler = None
+
+    # Loads the entire data from the processed files
+    loader = load_data(
+        PROCESSED_FILE, LANG_FILE, max_total_bundle=max_total_bundle
+    )
+
+    # Should load intermediate too, but for now let's just grab those
+    # where we actually finished the training.
+    last_model = os.path.join(save_dir, f'saved_model_epoch_{epochs}.pt')
+    if os.path.exists(last_model):
+        model.load_state_dict(torch.load(last_model, map_location=device))
+    else:
+        for epoch in range(epochs):
+            train(
+                epoch,
+                model,
+                loader,
+                optimizer,
+                scheduler,
+                writer=writer,
+                verbose=verbose
+            )
+            torch.save(
+                model.state_dict(),
+                os.path.join(save_dir, f'saved_model_epoch_{epoch+1}.pt')
+            )
+        torch.save(
+            model.state_dict(),
+            os.path.join(save_dir, 'saved_model_epoch_last.pt')
+        )
+        logger.info('Done pretraining!')
+
+    # Downstream task
+    dataset = CSVDataset(DOWNSTREAM_TRAIN_FILE, LANG_FILE)
+    train_latent_data = []
+    train_target = []
+    model.encoder.update_batch_size(2)
+    for seqs, y in dataset:
+        encoder_seq, _, _ = packed_sequential_data_preparation(
+            seqs, input_keep=1., start_index=2, end_index=3, device=device
+        )
+
+        z, _, _ = model(encoder_seq, torch.tensor([[0, 1]]).T)
+        train_latent_data.append(
+            z.view(1, -1).squeeze().cpu().detach().numpy()
+        )
+        train_target.append(y)
+    train_latent_data = np.stack(train_latent_data)
+    train_target = np.array(train_target)
+
+    dataset = CSVDataset(DOWNSTREAM_TEST_FILE, LANG_FILE)
+    test_latent_data = []
+    test_target = []
+    model.encoder.update_batch_size(2)
+    for seqs, y in dataset:
+        encoder_seq, _, _ = packed_sequential_data_preparation(
+            seqs, input_keep=1., start_index=2, end_index=3, device=device
+        )
+
+        z, _, _ = model(encoder_seq, torch.tensor([[0, 1]]).T)
+        test_latent_data.append(z.view(1, -1).squeeze().cpu().detach().numpy())
+        test_target.append(y)
+    test_latent_data = np.stack(test_latent_data)
+    test_target = np.array(test_target)
+
+    acc = compute_logistic_regression_accuracy(
+        train_latent_data, train_target, test_latent_data, test_target
+    )
+    writer.add_scalar('accuracy', acc)
+    logger.info(f'Downstream accuracy: {acc}')
+    logger.info('Done downstream!')
