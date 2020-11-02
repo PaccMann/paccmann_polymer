@@ -50,7 +50,7 @@ args = parser.parse_args()
 
 def discrete_cmap(N, base_cmap=None):
     """Create an N-bin discrete colormap from the specified input map
-    
+
     From https://gist.github.com/jakevdp/91077b0cae40f8f8244a
     """
 
@@ -189,9 +189,172 @@ def run_model(dataset, epochs=60, graph_gamma=None):
     recon = np.concatenate(recons, axis=0)
     latent = np.concatenate(zs, axis=0)
 
-    # recon = recon[:, 0], recon[:, 1]
-    # latent = zs[:, 0], zs[:, 1], zs[:, 2]
-
-    original = gt  #gt[:, 0], gt[:, 1]
-    # generated = generated[:, 0], generated[:, 1]
+    original = gt
     return original, recon, latent, generated, colors
+
+
+
+if __name__ == "__main__":
+
+    KZ = 3
+
+    dataset = 'loop'
+    # dataset = 'mnist'
+    partial_graph = False
+    dataset_suffix = 'partial' if partial_graph else 'full'
+    epochs = 10
+
+    savefile = f'topo.synthetic_{dataset}.{dataset_suffix}.z{KZ}.npy'
+
+    SYNTHETIC_DATAFOLDER = # Add folder where to save the synthetic files
+    ds = SyntheticDataset(
+        os.path.join(
+            SYNTHETIC_DATAFOLDER, 'polylines', dataset, dataset_suffix
+        ),
+        number_samples=2000,
+        synthetic_sampling_fn=CreatePolylines[dataset](
+            partial_graph=partial_graph
+        ),
+        clean_start=False
+    )
+    graph = CreatePolylines[dataset](partial_graph=partial_graph).get_graph()
+
+    if not os.path.exists(savefile) or True:
+        try:
+            (original, recon, latent, generated,
+             _) = run_model(dataset=ds, epochs=epochs, graph_gamma=0.0)
+        except KeyboardInterrupt:
+            print('Cancelled original model training')
+        try:
+            (original_cons, recon_cons, latent_cons, generated_cons,
+             colors) = run_model(dataset=ds, epochs=epochs, graph_gamma=10.0)
+        except KeyboardInterrupt:
+            print('Cancelled original model training')
+
+        np.save(
+            savefile, {
+                'vanilla':
+                    {
+                        'og': original,
+                        'recon': recon,
+                        'lat': latent,
+                        'gen': generated
+                    },
+                'constr':
+                    {
+                        'og': original_cons,
+                        'recon': recon_cons,
+                        'lat': latent_cons,
+                        'gen': generated_cons
+                    }
+            }
+        )
+    else:
+        data = np.load(savefile, allow_pickle=True).item()
+        original_cons = data['constr']['og']
+        recon_cons = data['constr']['recon']
+        latent_cons = data['constr']['lat']
+        generated_cons = data['constr']['gen']
+
+        original = data['vanilla']['og']
+        recon = data['vanilla']['recon']
+        latent = data['vanilla']['lat']
+        generated = data['vanilla']['gen']
+
+        colors = int(len(latent) / graph.number_of_nodes()
+                     ) * list(range(graph.number_of_nodes()))
+        while len(colors) < len(latent):
+            colors.append(0)
+    recon = recon[:, 0], recon[:, 1]
+
+    latent = latent[:, 0], latent[:, 1], latent[:, 2]
+    original = original[:, 0], original[:, 1]
+
+    recon_cons = recon_cons[:, 0], recon_cons[:, 1]
+
+    latent_cons = latent_cons[:, 0], latent_cons[:, 1], latent_cons[:, 2]
+    original_cons = original_cons[:, 0], original_cons[:, 1]
+
+    num_colors = len(graph)
+
+    fig = plt.figure(figsize=(13, 6))
+    fig.subplots_adjust(left=.05, right=.93, top=.95, bottom=0.05, wspace=0.1)
+
+    ax = fig.add_subplot(2, 2, 1, projection='3d')
+    ax.scatter(*latent, c=colors, cmap=discrete_cmap(num_colors, 'jet'), s=2)
+
+    ax2 = fig.add_subplot(2, 2, 2, projection='3d')
+    ax2.scatter(*latent_cons, c=colors, cmap=discrete_cmap(num_colors, 'jet'), s=2)
+
+    ax3 = fig.add_subplot(2, 2, 3)
+    ax3.scatter(
+        *original,
+        c=colors,
+        marker='o',
+        cmap=discrete_cmap(num_colors, 'jet'),
+        s=5,
+        alpha=0.5
+    )
+    ax3.scatter(
+        *recon,
+        c=colors,
+        cmap=discrete_cmap(num_colors, 'jet'),
+        s=10,
+        marker='x',
+        alpha=0.5
+    )
+
+    ax4 = fig.add_subplot(
+        2,
+        2,
+        4
+    ) 
+    ax4.scatter(
+        *original_cons,
+        c=colors,
+        marker='o',
+        cmap=discrete_cmap(num_colors, 'jet'),
+        s=5,
+        alpha=0.5
+    )
+    ax4.scatter(
+        *recon_cons,
+        c=colors,
+        cmap=discrete_cmap(num_colors, 'jet'),
+        s=10,
+        marker='x',
+        alpha=0.5
+    )
+
+    cax = plt.axes([0.9, 0.1, 0.075, 0.8])
+    cax.axis('off')
+    plt.colorbar(ax2.get_children()[0], ax=cax)
+
+    plt.axes([0.85, 0.5, 0.1, 0.1])
+    Gcc = graph.subgraph(
+        sorted(nx.connected_components(graph), key=len, reverse=True)[0]
+    )
+    pos = nx.spring_layout(graph)
+    plt.axis("off")
+    nx.draw_networkx_nodes(
+        graph,
+        pos,
+        node_size=20,
+        node_color=range(num_colors),
+        cmap=discrete_cmap(num_colors, 'jet')
+    )
+    nx.draw_networkx_edges(graph, pos, alpha=0.4)
+
+    def on_move(event):
+        if event.inaxes == ax:
+            ax2.view_init(elev=ax.elev, azim=ax.azim)
+        elif event.inaxes == ax2:
+            ax.view_init(elev=ax2.elev, azim=ax2.azim)
+        else:
+            return
+        fig.canvas.draw_idle()
+
+    c1 = fig.canvas.mpl_connect('motion_notify_event', on_move)
+
+    plt.show()
+    print()
