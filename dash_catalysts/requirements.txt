@@ -1,0 +1,7 @@
+dash==1.6.1
+dash-daq==0.5.0
+gunicorn
+pandas
+numpy
+git+https://github.com/PaccMann/paccmann_datasets.git@d2b1645f4e15d75b5de8e4b14a9c1f9fd9dbed9f#egg=pytoda
+git+https://github.com/PaccMann/paccmann_chemistry.git@77bc468ee172575df5e2bf60bcfea522ef2e4070#egg=paccmann_chemistry
