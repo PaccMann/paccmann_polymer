@@ -6,7 +6,7 @@ setup(
     version='0.0.1',
     description=('PyTorch implementation of Polymer models'),
     long_description=open('README.md').read(),
-    url='https://github.ibm.com/PaccMann/paccmann_polymer',
+    url='https://github.com/PaccMann/paccmann_polymer',
     author='Nil Adell Mill, Jannis Born, Matteo Manica',
     author_email=(
         'ael@zurich.ibm.com, jab@zurich.ibm.com, tte@zurich.ibm.com'
