@@ -1,4 +1,5 @@
-[![Build Status](https://travis.ibm.com/PaccMann/paccmann_polymer.svg?token=BoxDFQJLkgmss6yytwxe&branch=master)](https://travis.ibm.com/PaccMann/paccmann_polymer)
+[![Build Status](https://github.com/PaccMann/paccmann_polymer/actions/workflows/build.yml/badge.svg)](https://github.com/PaccMann/paccmann_polymer/actions/workflows/build.yml)
+
 # paccmann_polymer
 
 PyTorch implementation of `paccmann_polymer`. Repo for the paper:
