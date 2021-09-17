@@ -22,7 +22,7 @@ def save_downstream_data(filename, pos_data, neg_data):
 
 
 def remove_repeated(seen_list,
-                    data: Dict[str, Any]) -> Tuple[List, Dict[str, Any]]:
+                    data: Dict[str, Any]) -> Tuple[List, List]:
     """Removes elements that are on seen list
 
     Args:
@@ -31,7 +31,7 @@ def remove_repeated(seen_list,
             should have keys: 'edgelist' and 'smiles2nodes'
 
     Returns:
-        Tuple[List, Dict[str, Any]]: [description]
+        Tuple[List, List]: [description]
     """
     g = nx.from_edgelist(data['edgelist'])
     for x, i in data['smiles2nodes'].items():
@@ -42,7 +42,7 @@ def remove_repeated(seen_list,
         if smiles in seen_list:
             g.remove_node(i)
     g = nx.convert_node_labels_to_integers(g)
-    clean_edgelist = nx.to_pandas_edgelist(g).values
+    clean_edgelist = list(nx.to_pandas_edgelist(g).values)
     smiles_list = [g.nodes[i]['smiles'] for i in range(len(g))]
     return clean_edgelist, smiles_list
 

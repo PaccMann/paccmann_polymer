@@ -7,11 +7,11 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import Node2Vec
 from torch.utils.tensorboard import SummaryWriter
 
-writer = SummaryWriter(f'logs_cora/node2vec')
+writer = SummaryWriter('logs_cora/node2vec')
 
-dataset = 'Cora'
-path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-dataset = Planetoid(path, dataset)
+name = 'Cora'
+path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
+dataset = Planetoid(path, name)
 data = dataset[0]
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

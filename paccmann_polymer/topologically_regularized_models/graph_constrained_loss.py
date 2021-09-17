@@ -41,7 +41,7 @@ def graph_loss(z_locations: torch.Tensor, g_dists: torch.Tensor):
 
     if z_dists.shape != g_dists.shape:
         raise ValueError()
-    loss = torch.tensor(0.0).to(torch.device(z_dists.device))
+    loss = torch.tensor(0.0).to(torch.device(z_dists.device))  # type: ignore
     for i in range(len(z_dists)):
         for j in range(i + 1, len(z_dists)):
             d_ij = z_dists[i, j]
