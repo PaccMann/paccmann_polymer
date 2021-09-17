@@ -203,13 +203,13 @@ if __name__ == "__main__":
         DATA_FOLDER, 'MIT_mixed', 'downstream_test.json'
     )
 
-    MDL_DIR =  # Model directory
+    MDL_DIR = '' # Model directory (fill in here)
 
     PARAM_FILE = os.path.join(
         MDL_DIR, 'model_params.json'
     )  # Add model dir
 
-    # The models here follow https://github.com/PaccMann/paccmann_chemistry/issues 
+    # The models here follow https://github.com/PaccMann/paccmann_chemistry 
     # and where pretrained by using the code under `experiments/finetunning`.
     # The following scheme is a skeleton of how we originally ran the
     # experiments. Three setups were tested, pretrained model, finetuned
@@ -233,7 +233,7 @@ if __name__ == "__main__":
             )
     }[encoder_model]
 
-    LANG_FILE =  # Lang FILE
+    LANG_FILE = ''  # Lang FILE (fill in here)
 
     device = get_device()
 
@@ -307,13 +307,13 @@ if __name__ == "__main__":
             seqs, input_keep=1., start_index=2, end_index=3, device=device
         )
 
-        z, _, _ = model(encoder_seq, torch.tensor([[0, 1]]).T)
+        z, _, _ = model(encoder_seq, torch.tensor([[0, 1]]).T)  # type: ignore
         train_latent_data.append(
             z.view(1, -1).squeeze().cpu().detach().numpy()
         )
         train_target.append(y)
-    train_latent_data = np.stack(train_latent_data)
-    train_target = np.array(train_target)
+    train_latent_data = np.stack(train_latent_data)  # type: ignore
+    train_target = np.array(train_target)  # type: ignore
 
     dataset = CSVDataset(DOWNSTREAM_TEST_FILE, LANG_FILE)
     test_latent_data = []
@@ -324,11 +324,11 @@ if __name__ == "__main__":
             seqs, input_keep=1., start_index=2, end_index=3, device=device
         )
 
-        z, _, _ = model(encoder_seq, torch.tensor([[0, 1]]).T)
+        z, _, _ = model(encoder_seq, torch.tensor([[0, 1]]).T)  # type: ignore
         test_latent_data.append(z.view(1, -1).squeeze().cpu().detach().numpy())
         test_target.append(y)
-    test_latent_data = np.stack(test_latent_data)
-    test_target = np.array(test_target)
+    test_latent_data = np.stack(test_latent_data)  # type: ignore
+    test_target = np.array(test_target)  # type: ignore
 
     acc = compute_logistic_regression_accuracy(
         train_latent_data, train_target, test_latent_data, test_target

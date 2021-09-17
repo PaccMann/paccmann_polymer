@@ -206,7 +206,7 @@ if __name__ == "__main__":
 
     savefile = f'topo.synthetic_{dataset}.{dataset_suffix}.z{KZ}.npy'
 
-    SYNTHETIC_DATAFOLDER = # Add folder where to save the synthetic files
+    SYNTHETIC_DATAFOLDER = '' # Add folder where to save the synthetic files
     ds = SyntheticDataset(
         os.path.join(
             SYNTHETIC_DATAFOLDER, 'polylines', dataset, dataset_suffix

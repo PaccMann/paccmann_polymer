@@ -19,6 +19,7 @@ dependencies:
     - torch-spline-conv==1.2.0 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
     - torch-geometric==1.6.1
     - matplotlib>=3.1.1
+    - mypy>=0.770
     - networkx>=2.5
     - scikit-learn>=0.23.2
     - tensorboard>=1.15.0

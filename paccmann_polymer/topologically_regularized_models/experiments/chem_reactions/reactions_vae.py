@@ -1,28 +1,23 @@
+import argparse
+import logging
 import os
 import sys
-from typing import List, Union
-
 from time import time
-import numpy as np
+
 import networkx as nx
+import numpy as np
 import torch
 import torch.optim as optim
-
 import tqdm
-
-from paccmann_chemistry.utils.hyperparams import OPTIMIZER_FACTORY
 from paccmann_chemistry.utils import get_device
-
+from paccmann_chemistry.utils.hyperparams import OPTIMIZER_FACTORY
 from paccmann_polymer.models.paccmann_encoder import Encoder
-from paccmann_polymer.topologically_regularized_models.graph_constrained_loss \
-    import graph_loss
-from paccmann_polymer.topologically_regularized_models.experiments.chem_reactions.utils \
-    import (packed_sequential_data_preparation, load_data, CSVDataset,
-            compute_logistic_regression_accuracy)
-
+from paccmann_polymer.topologically_regularized_models.experiments.chem_reactions.utils import (
+    CSVDataset, compute_logistic_regression_accuracy, load_data,
+    packed_sequential_data_preparation)
+from paccmann_polymer.topologically_regularized_models.graph_constrained_loss import \
+    graph_loss
 from torch.utils.tensorboard import SummaryWriter
-
-import logging
 
 # pylint: disable=not-callable  # Not the optimal, we should change .pylintrc
 
@@ -153,16 +148,16 @@ if __name__ == "__main__":
     lr = args.lr
 
     # FILE DEFS
-    DATA_FOLDER =  # Folder with the processed reactions dataset
+    DATA_FOLDER = ''  # Folder with the processed reactions dataset (fill in)
     PROCESSED_FILE = os.path.join(
         DATA_FOLDER, 'MIT_mixed', 'processed-train.json'
     )  # Processed reactions dataset file
 
     # For more info see https://github.com/PaccMann/paccmann_chemistry
-    MDL_DIR =  # Model directory
-    PARAM_FILE =  # Model params
-    WEIGHT_FILE =  # Model weights
-    LANG_FILE =  # Language file
+    MDL_DIR = ''  # Model directory (fill in)
+    PARAM_FILE = ''  # Model params (fill in)
+    WEIGHT_FILE = ''  # Model weights (fill in)
+    LANG_FILE = ''  # Language file (fill in)
 
     device = get_device()
 
@@ -172,7 +167,7 @@ if __name__ == "__main__":
     )
 
     writer = SummaryWriter(f'logs/20k_data/react_gcvae_{graph_gamma}/lr_{lr}')
-    save_dir = os.path.join(model_dir, f'weights')
+    save_dir = os.path.join(model_dir, 'weights')
     os.makedirs(save_dir, exist_ok=True)
 
     paccmann_vae = Encoder(
@@ -245,8 +240,8 @@ if __name__ == "__main__":
             z.view(1, -1).squeeze().cpu().detach().numpy()
         )
         train_target.append(y)
-    train_latent_data = np.stack(train_latent_data)
-    train_target = np.array(train_target)
+    train_latent_data = np.stack(train_latent_data)  # type: ignore
+    train_target = np.array(train_target)  # type: ignore
 
     # Downstream test
     dataset = CSVDataset(DOWNSTREAM_TEST_FILE, LANG_FILE)
@@ -261,8 +256,8 @@ if __name__ == "__main__":
         z = model.encode(encoder_seq)
         test_latent_data.append(z.view(1, -1).squeeze().cpu().detach().numpy())
         test_target.append(y)
-    test_latent_data = np.stack(test_latent_data)
-    test_target = np.array(test_target)
+    test_latent_data = np.stack(test_latent_data)  # type: ignore
+    test_target = np.array(test_target)  # type: ignore
 
     acc = compute_logistic_regression_accuracy(
         train_latent_data, train_target, test_latent_data, test_target

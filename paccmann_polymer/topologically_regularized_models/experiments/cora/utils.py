@@ -100,7 +100,7 @@ def load_data(
                 for i in range(len(sub_graph))
             ]
         )
-        edge_index = torch.tensor(nx.to_pandas_edgelist(sub_graph).values).T
+        edge_index = torch.tensor(nx.to_pandas_edgelist(sub_graph).values).T  # type: ignore
 
         data.append(Data(x=x, edge_index=edge_index, num_nodes=len(x)))
 

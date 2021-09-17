@@ -46,12 +46,12 @@ class SyntheticDataset(InMemoryDataset):
             synthetic_sampling_fn, object
         ) and self.number_samples is None:
             try:
-                self.number_samples = len(synthetic_sampling_fn)
+                self.number_samples = len(synthetic_sampling_fn)  # type: ignore
                 logger.info(
                     f'Using sampling function length: {self.number_samples}'
                 )
             except Exception as e:
-                raise e('No number of samples set.')
+                raise ValueError('No number of samples set.')
         else:
             logger.info(
                 f'Using provided number of samples: {self.number_samples}'
